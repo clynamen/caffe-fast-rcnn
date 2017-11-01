@@ -1,7 +1,4 @@
-FROM alantrrs/cuda-docker
-
-# Verify it has cuDNN
-RUN ls -la /usr/local/cuda/include | grep cudnn
+FROM nvidia/cuda:7.5-cudnn3-devel
 
 ENV PYTHONPATH=/home/caffe-fast-rcnn/python:$PYTHONPATH \
     PATH=/home/conda/bin:$PATH \
@@ -35,19 +32,22 @@ RUN apt-get update && apt-get install -y \
     unzip && \
     apt-get clean
 
+RUN apt-get install -y wget
+
 # Install Glog and Gflags 
 RUN cd /home && \
-    wget --quiet https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz && \
-    tar zxvf glog-0.3.3.tar.gz && \
-    cd glog-0.3.3 && \
+    wget https://github.com/google/glog/archive/v0.3.3.tar.gz && \
+    tar zxvf v0.3.3.tar.gz && mv glog-0.3.3 /
+
+RUN cd /glog-0.3.3 && \
     ./configure && \
-    make -j$(nproc) && \
-    make install -j$(nproc) && \
+    make -j8 && \
+    make install -j8 && \
     cd .. && \
     rm -rf glog-0.3.3.tar.gz && \ 
-    ldconfig && \
-    \
-    cd /home && \
+    ldconfig 
+
+RUN cd /home && \
     wget --quiet https://github.com/schuhschuh/gflags/archive/master.zip && \
     unzip master.zip && \
     cd gflags-master && \
@@ -68,8 +68,10 @@ RUN bash Anaconda-2.2.0-Linux-x86_64.sh -b -p /home/conda && \
     rm Anaconda-2.2.0-Linux-x86_64.sh && \
     /home/conda/bin/conda install --yes conda==3.10.1 && \
     conda install --yes cython && \
-    conda install --yes opencv && \
     conda install --yes --channel https://conda.binstar.org/auto easydict 
+
+RUN conda install -c https://conda.binstar.org/menpo opencv
+
 
 # To remove erro when loading libreadline from anaconda
 RUN rm /home/conda/lib/libreadline* && \
@@ -103,6 +105,7 @@ RUN echo "CXX := /usr/bin/g++-4.6" >> Makefile.config && \
     sed -i 's/CXX :=/CXX ?=/' Makefile 
 
 RUN cat Makefile.config
+
 RUN make -j8  && make pycaffe
 
 
